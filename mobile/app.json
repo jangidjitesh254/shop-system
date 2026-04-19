@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Shop Manager",
+    "slug": "shop-manager-mobile",
+    "scheme": "shopmanager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563eb"
+      },
+      "permissions": ["android.permission.CAMERA"]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan product barcodes to look up items and create bills."
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Shop Manager to use the camera to scan product barcodes."
+        }
+      ]
+    ],
+    "web": {
+      "bundler": "metro"
+    },
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "apiBaseUrl": "http://192.168.43.123:5000/api"
+    }
+  }
+}
