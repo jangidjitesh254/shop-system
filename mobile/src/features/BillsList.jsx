@@ -126,7 +126,8 @@ export default function BillsList() {
           data={bills}
           keyExtractor={(i) => i._id}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           ListEmptyComponent={
             <View style={styles.emptyBox}>

@@ -244,7 +244,8 @@ export default function Stock() {
           data={products}
           keyExtractor={(i) => i._id}
           renderItem={renderItem}
-          contentContainerStyle={{ padding: 12, paddingBottom: 90 }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Ionicons name="cube-outline" size={40} color={colors.textLight} />

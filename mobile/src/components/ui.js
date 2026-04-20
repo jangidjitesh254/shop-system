@@ -21,8 +21,14 @@ export const Input = React.forwardRef((props, ref) => (
   <TextInput
     ref={ref}
     placeholderTextColor={colors.textLight}
+    selectionColor={colors.brand}
+    underlineColorAndroid="transparent"
     {...props}
-    style={[styles.input, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, props.style]}
+    style={[
+      styles.input,
+      props.multiline && { minHeight: 80, textAlignVertical: 'top' },
+      props.style,
+    ]}
   />
 ));
 

@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +11,7 @@ import Toast from 'react-native-toast-message';
 import api from '../src/api/axios';
 import { Card, Input, Label, Button } from '../src/components/ui';
 import BarcodeScannerModal from '../src/components/BarcodeScannerModal';
+import FormKeyboard from '../src/components/FormKeyboard';
 import { colors } from '../src/theme/colors';
 
 const UNITS = ['pcs', 'kg', 'g', 'l', 'ml', 'box', 'pack'];
@@ -95,14 +93,8 @@ export default function ProductForm() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
-      <ScrollView
-        contentContainerStyle={{ padding: 16 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <>
+      <FormKeyboard>
         <Card style={{ padding: 18 }}>
           <Label>Product Name *</Label>
           <Input value={form.name} onChangeText={update('name')} />
@@ -228,7 +220,7 @@ export default function ProductForm() {
             />
           </View>
         </Card>
-      </ScrollView>
+      </FormKeyboard>
 
       <BarcodeScannerModal
         visible={scannerOpen}
@@ -244,7 +236,7 @@ export default function ProductForm() {
           });
         }}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }
 

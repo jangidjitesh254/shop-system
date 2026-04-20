@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../src/context/AuthContext';
 import { Card, Input, Label, Button } from '../src/components/ui';
+import FormKeyboard from '../src/components/FormKeyboard';
 import { colors } from '../src/theme/colors';
 
 export default function Register() {
@@ -49,12 +43,8 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Start managing your shop today</Text>
+    <FormKeyboard contentPadding={20} bottomGap={260}>
+      <Text style={styles.title}>Start managing your shop today</Text>
 
         <Card style={styles.card}>
           <Label>Your Name *</Label>
@@ -91,13 +81,11 @@ export default function Register() {
             style={{ marginTop: 20 }}
           />
         </Card>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </FormKeyboard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, flexGrow: 1 },
   title: { color: colors.textMuted, marginBottom: 14 },
   card: { padding: 20 },
   mt: { marginTop: 14 },

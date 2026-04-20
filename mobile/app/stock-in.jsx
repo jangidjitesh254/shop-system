@@ -2,19 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Modal,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import api from '../src/api/axios';
 import { Card, Input, Label, Button } from '../src/components/ui';
+import FormKeyboard from '../src/components/FormKeyboard';
 import { formatCurrency } from '../src/utils/format';
 import { colors } from '../src/theme/colors';
 
@@ -90,14 +88,8 @@ export default function StockIn() {
   const total = Number(form.quantity || 0) * Number(form.pricePerUnit || 0);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
-      <ScrollView
-        contentContainerStyle={{ padding: 16 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <>
+      <FormKeyboard>
         <Text style={styles.subtitle}>
           Record new stock received from a supplier
         </Text>
@@ -175,7 +167,7 @@ export default function StockIn() {
             />
           </View>
         </Card>
-      </ScrollView>
+      </FormKeyboard>
 
       <Modal
         visible={pickerOpen}
@@ -230,7 +222,7 @@ export default function StockIn() {
           />
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </>
   );
 }
 

@@ -3,18 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   FlatList,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import api from '../src/api/axios';
 import { Card, Input, Label, Button } from '../src/components/ui';
+import FormKeyboard from '../src/components/FormKeyboard';
 import { formatCurrency } from '../src/utils/format';
 import { colors } from '../src/theme/colors';
 
@@ -160,14 +158,8 @@ export default function Billing() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: colors.bg }}
-    >
-      <ScrollView
-        contentContainerStyle={{ padding: 12, paddingBottom: 30 }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <>
+      <FormKeyboard contentPadding={12} bottomGap={220}>
         <Button
           title="Add Product to Cart"
           onPress={() => setPickerOpen(true)}
@@ -318,7 +310,7 @@ export default function Billing() {
             style={{ marginTop: 16 }}
           />
         </Card>
-      </ScrollView>
+      </FormKeyboard>
 
       <Modal
         visible={pickerOpen}
@@ -373,7 +365,7 @@ export default function Billing() {
           />
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </>
   );
 }
 

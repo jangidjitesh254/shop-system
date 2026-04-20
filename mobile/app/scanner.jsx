@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -289,10 +290,17 @@ export default function Scanner() {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
         style={styles.sheet}
-        contentContainerStyle={{ padding: 14, paddingBottom: 30 }}
+      >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 240 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.sheetHeader}>
           <View>
@@ -446,6 +454,7 @@ export default function Scanner() {
           </Card>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={pickerOpen}

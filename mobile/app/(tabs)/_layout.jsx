@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/theme/colors';
 
 function ScanTabButton({ onPress }) {
@@ -16,6 +17,8 @@ function ScanTabButton({ onPress }) {
 
 export default function TabsLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'ios' ? 14 : 6);
 
   return (
     <Tabs
@@ -28,8 +31,8 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: -2 },
         tabBarStyle: {
           paddingTop: 6,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-          height: Platform.OS === 'ios' ? 82 : 64,
+          paddingBottom: bottomInset,
+          height: 56 + bottomInset,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: '#fff',
