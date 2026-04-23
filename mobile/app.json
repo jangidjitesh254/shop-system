@@ -41,7 +41,7 @@
       "typedRoutes": false
     },
     "extra": {
-      "apiBaseUrl": "http://192.168.43.123:5000/api"
+      "apiBaseUrl": "https://shop-system-hezz.onrender.com"
     }
   }
 }
