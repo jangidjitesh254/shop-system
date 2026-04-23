@@ -15,14 +15,26 @@ const protect = asyncHandler(async (req, res, next) => {
         res.status(401);
         throw new Error('User no longer exists');
       }
+      if (req.user.isActive === false) {
+        res.status(403);
+        throw new Error('Account disabled');
+      }
       return next();
     } catch (err) {
-      res.status(401);
-      throw new Error('Not authorized, token invalid');
+      res.status(res.statusCode === 200 ? 401 : res.statusCode);
+      throw new Error(err.message || 'Not authorized, token invalid');
     }
   }
   res.status(401);
   throw new Error('Not authorized, no token');
 });
 
-module.exports = { protect };
+const requireAdmin = asyncHandler(async (req, res, next) => {
+  if (!req.user || req.user.role !== 'admin') {
+    res.status(403);
+    throw new Error('Admin access required');
+  }
+  next();
+});
+
+module.exports = { protect, requireAdmin };

@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showProfit, setShowProfit] = useState(false);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -116,6 +117,159 @@ export default function Dashboard() {
           </View>
         </View>
       </View>
+
+      {/* Stock-in summary — includes new product additions AND restocking */}
+      <View style={styles.stockInCard}>
+        <View style={styles.stockInHead}>
+          <View style={styles.stockInIcon}>
+            <Ionicons
+              name="arrow-down-circle-outline"
+              size={18}
+              color={colors.accent}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.stockInTitle}>Stock Imports</Text>
+            <Text style={styles.stockInMeta}>
+              New products + restock purchases
+            </Text>
+          </View>
+        </View>
+        <View style={styles.stockInRow}>
+          <View style={styles.stockInItem}>
+            <Text style={styles.stockInLabel}>Today</Text>
+            <Text style={styles.stockInValue}>
+              {formatCurrency(stats.todayStockIn || 0)}
+            </Text>
+            <Text style={styles.stockInSub}>
+              {stats.todayStockInCount || 0} entr{(stats.todayStockInCount || 0) !== 1 ? 'ies' : 'y'}
+            </Text>
+          </View>
+          <View style={styles.vDivider} />
+          <View style={styles.stockInItem}>
+            <Text style={styles.stockInLabel}>This month</Text>
+            <Text style={styles.stockInValue}>
+              {formatCurrency(stats.monthStockIn || 0)}
+            </Text>
+            <Text style={styles.stockInSub}>
+              {stats.monthStockInCount || 0} entr{(stats.monthStockInCount || 0) !== 1 ? 'ies' : 'y'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Profit toggle */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => setShowProfit((v) => !v)}
+        style={styles.profitCard}
+      >
+        <View style={styles.profitHead}>
+          <View style={styles.profitIcon}>
+            <Ionicons name="trending-up" size={18} color={colors.success} />
+          </View>
+          <Text style={styles.profitTitle}>Profit</Text>
+          <View style={{ flex: 1 }} />
+          <View
+            style={[
+              styles.eyeBtn,
+              showProfit && { backgroundColor: colors.success },
+            ]}
+          >
+            <Ionicons
+              name={showProfit ? 'eye-off-outline' : 'eye-outline'}
+              size={14}
+              color={showProfit ? '#fff' : colors.success}
+            />
+            <Text
+              style={[
+                styles.eyeText,
+                { color: showProfit ? '#fff' : colors.success },
+              ]}
+            >
+              {showProfit ? 'Hide' : 'Show'}
+            </Text>
+          </View>
+        </View>
+
+        {showProfit ? (
+          <View style={styles.profitBody}>
+            <View style={styles.profitItem}>
+              <Text style={styles.profitLabel}>Today</Text>
+              <Text style={styles.profitValue}>
+                {formatCurrency(stats.todayProfit || 0)}
+              </Text>
+              <View style={styles.profitPctRow}>
+                <Ionicons
+                  name={(stats.todayProfit || 0) >= 0 ? 'caret-up' : 'caret-down'}
+                  size={12}
+                  color={
+                    (stats.todayProfit || 0) >= 0
+                      ? colors.success
+                      : colors.danger
+                  }
+                />
+                <Text
+                  style={[
+                    styles.profitPct,
+                    {
+                      color:
+                        (stats.todayProfit || 0) >= 0
+                          ? colors.success
+                          : colors.danger,
+                    },
+                  ]}
+                >
+                  {(stats.todayProfitPct || 0).toFixed(1)}%
+                </Text>
+              </View>
+              <Text style={styles.profitSub}>
+                Cost {formatCurrency(stats.todayCost || 0)}
+              </Text>
+            </View>
+
+            <View style={styles.vDivider} />
+
+            <View style={styles.profitItem}>
+              <Text style={styles.profitLabel}>This month</Text>
+              <Text style={styles.profitValue}>
+                {formatCurrency(stats.monthProfit || 0)}
+              </Text>
+              <View style={styles.profitPctRow}>
+                <Ionicons
+                  name={(stats.monthProfit || 0) >= 0 ? 'caret-up' : 'caret-down'}
+                  size={12}
+                  color={
+                    (stats.monthProfit || 0) >= 0
+                      ? colors.success
+                      : colors.danger
+                  }
+                />
+                <Text
+                  style={[
+                    styles.profitPct,
+                    {
+                      color:
+                        (stats.monthProfit || 0) >= 0
+                          ? colors.success
+                          : colors.danger,
+                    },
+                  ]}
+                >
+                  {(stats.monthProfitPct || 0).toFixed(1)}%
+                </Text>
+              </View>
+              <Text style={styles.profitSub}>
+                Cost {formatCurrency(stats.monthCost || 0)}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.profitHidden}>
+            Tap to reveal today and this month's profit with margin %
+          </Text>
+        )}
+      </TouchableOpacity>
 
       <View style={styles.statGrid}>
         <StatCard
@@ -286,6 +440,96 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: 'rgba(255,255,255,0.25)',
   },
+  // Stock-in card
+  stockInCard: {
+    marginTop: 14,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+  },
+  stockInHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stockInIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.accentBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stockInTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  stockInMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  stockInRow: { flexDirection: 'row', marginTop: 12, alignItems: 'center' },
+  stockInItem: { flex: 1 },
+  stockInLabel: { color: colors.textMuted, fontSize: 11 },
+  stockInValue: {
+    color: colors.text,
+    fontWeight: '800',
+    fontSize: 18,
+    marginTop: 4,
+  },
+  stockInSub: { color: colors.textLight, fontSize: 11, marginTop: 2 },
+  vDivider: {
+    width: 1,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: 10,
+    alignSelf: 'stretch',
+  },
+  // Profit card
+  profitCard: {
+    marginTop: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+  },
+  profitHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  profitIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.successBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profitTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  eyeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
+  eyeText: { fontSize: 11, fontWeight: '700' },
+  profitHidden: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  profitBody: { flexDirection: 'row', marginTop: 14, alignItems: 'flex-start' },
+  profitItem: { flex: 1 },
+  profitLabel: { color: colors.textMuted, fontSize: 11 },
+  profitValue: {
+    color: colors.text,
+    fontWeight: '800',
+    fontSize: 20,
+    marginTop: 4,
+  },
+  profitPctRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginTop: 3,
+  },
+  profitPct: { fontSize: 13, fontWeight: '700' },
+  profitSub: { color: colors.textLight, fontSize: 11, marginTop: 4 },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   stat: {
     flexBasis: '48%',

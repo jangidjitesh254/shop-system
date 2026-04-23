@@ -27,7 +27,6 @@ export default function FormKeyboard({ children, contentPadding = 16, bottomGap 
       <ScrollView
         contentContainerStyle={{ padding: contentPadding, paddingBottom: bottomGap }}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         {children}

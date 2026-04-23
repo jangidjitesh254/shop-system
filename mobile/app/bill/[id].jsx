@@ -23,19 +23,40 @@ export default function BillDetail() {
   const { user } = useAuth();
   const [bill, setBill] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [settling, setSettling] = useState(false);
+
+  const loadBill = async () => {
+    try {
+      const { data } = await api.get(`/bills/${id}`);
+      setBill(data);
+    } catch {
+      Toast.show({ type: 'error', text1: 'Bill not found' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
-    let mounted = true;
-    api
-      .get(`/bills/${id}`)
-      .then(({ data }) => mounted && setBill(data))
-      .catch(() => Toast.show({ type: 'error', text1: 'Bill not found' }))
-      .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
+    loadBill();
   }, [id]);
+
+  const onSettle = async () => {
+    setSettling(true);
+    try {
+      await api.post(`/credit/bills/${id}/settle`);
+      Toast.show({ type: 'success', text1: 'Marked as paid' });
+      await loadBill();
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Could not settle',
+        text2: err.response?.data?.message || err.message,
+      });
+    } finally {
+      setSettling(false);
+    }
+  };
 
   const onDelete = () =>
     Alert.alert('Delete bill', 'Delete this bill? Stock will be restored.', [
@@ -81,7 +102,13 @@ export default function BillDetail() {
         : '',
       bill.discount > 0 ? `Discount: -${formatCurrency(bill.discount)}` : '',
       `Total: ${formatCurrency(bill.totalAmount)}`,
-      `Payment: ${bill.paymentMethod} · ${bill.paymentStatus}`,
+      bill.paymentMethod === 'credit'
+        ? `Payment: UDHAAR · ${bill.paymentStatus}${
+            bill.paymentStatus === 'unpaid' && bill.creditDueDate
+              ? ` · Due ${formatDate(bill.creditDueDate)}`
+              : ''
+          }`
+        : `Payment: ${bill.paymentMethod} · ${bill.paymentStatus}`,
       '',
       'Thank you for your business!',
     ]
@@ -108,9 +135,79 @@ export default function BillDetail() {
     );
   }
 
+  const isCredit = bill.paymentMethod === 'credit';
+  const isUnpaid = bill.paymentStatus === 'unpaid';
+  const dueDate = bill.creditDueDate ? new Date(bill.creditDueDate) : null;
+  const overdue = dueDate && dueDate.getTime() < Date.now();
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 90 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {isCredit && isUnpaid && (
+          <View
+            style={[
+              styles.creditBanner,
+              overdue && {
+                backgroundColor: colors.dangerBg,
+                borderColor: colors.danger,
+              },
+            ]}
+          >
+            <Ionicons
+              name={overdue ? 'alert-circle' : 'time-outline'}
+              size={20}
+              color={overdue ? colors.danger : colors.warning}
+            />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.creditBannerTitle,
+                  { color: overdue ? colors.danger : colors.warning },
+                ]}
+              >
+                {overdue ? 'OVERDUE' : 'UDHAAR — UNPAID'}
+              </Text>
+              {dueDate && (
+                <Text style={styles.creditBannerSub}>
+                  Due on {formatDate(dueDate)}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+        {isCredit && !isUnpaid && (
+          <View
+            style={[
+              styles.creditBanner,
+              {
+                backgroundColor: colors.successBg,
+                borderColor: colors.success,
+              },
+            ]}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.success}
+            />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[styles.creditBannerTitle, { color: colors.success }]}
+              >
+                UDHAAR — PAID
+              </Text>
+              {bill.creditPaidAt && (
+                <Text style={styles.creditBannerSub}>
+                  Settled on {formatDate(bill.creditPaidAt)}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
         <View style={styles.invoice}>
           <View style={styles.headerRow}>
             <View style={{ flex: 1 }}>
@@ -206,6 +303,22 @@ export default function BillDetail() {
       </ScrollView>
 
       <View style={styles.actionBar}>
+        {isCredit && isUnpaid ? (
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionSettle]}
+            onPress={onSettle}
+            disabled={settling}
+          >
+            {settling ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                <Text style={styles.actionText}>Mark as paid</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
           style={[styles.actionBtn, styles.actionShare]}
           onPress={onShare}
@@ -328,5 +441,19 @@ const styles = StyleSheet.create({
   },
   actionShare: { backgroundColor: colors.brand },
   actionDelete: { backgroundColor: colors.danger },
+  actionSettle: { backgroundColor: colors.success },
   actionText: { color: '#fff', fontWeight: '700' },
+  creditBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningBg,
+    marginBottom: 12,
+  },
+  creditBannerTitle: { fontWeight: '800', fontSize: 12, letterSpacing: 0.5 },
+  creditBannerSub: { color: colors.text, fontSize: 12, marginTop: 2 },
 });

@@ -9,6 +9,18 @@ const router = express.Router();
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
+const publicUser = (u) => ({
+  _id: u._id,
+  name: u.name,
+  email: u.email,
+  shopName: u.shopName,
+  shopAddress: u.shopAddress,
+  phone: u.phone,
+  role: u.role || 'owner',
+  isActive: u.isActive !== false,
+  token: generateToken(u._id),
+});
+
 // POST /api/auth/register
 router.post(
   '/register',
@@ -23,14 +35,18 @@ router.post(
       res.status(400);
       throw new Error('User already exists');
     }
-    const user = await User.create({ name, email, password, shopName, shopAddress, phone });
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      shopName: user.shopName,
-      token: generateToken(user._id),
+    const user = await User.create({
+      name,
+      email,
+      password,
+      shopName,
+      shopAddress,
+      phone,
+      role: 'owner',
     });
+    user.lastLoginAt = new Date();
+    await user.save();
+    res.status(201).json(publicUser(user));
   })
 );
 
@@ -40,18 +56,17 @@ router.post(
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        shopName: user.shopName,
-        token: generateToken(user._id),
-      });
-    } else {
+    if (!user || !(await user.matchPassword(password))) {
       res.status(401);
       throw new Error('Invalid email or password');
     }
+    if (user.isActive === false) {
+      res.status(403);
+      throw new Error('Your account has been disabled. Contact the admin.');
+    }
+    user.lastLoginAt = new Date();
+    await user.save();
+    res.json(publicUser(user));
   })
 );
 

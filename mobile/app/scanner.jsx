@@ -15,10 +15,12 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useHeaderHeight } from '@react-navigation/elements';
 import Toast from 'react-native-toast-message';
 import api from '../src/api/axios';
 import { formatCurrency } from '../src/utils/format';
 import { Card, Input, Label, Button } from '../src/components/ui';
+import CreditBlock from '../src/components/CreditBlock';
 import { colors } from '../src/theme/colors';
 
 const BARCODE_TYPES = [
@@ -37,10 +39,17 @@ const BARCODE_TYPES = [
   'code128',
 ];
 
-const PAYMENTS = ['cash', 'card', 'upi', 'other'];
+const PAYMENTS = [
+  { key: 'cash', label: 'Cash' },
+  { key: 'card', label: 'Card' },
+  { key: 'upi', label: 'UPI' },
+  { key: 'credit', label: 'Udhaar' },
+  { key: 'other', label: 'Other' },
+];
 
 export default function Scanner() {
   const router = useRouter();
+  const headerHeight = useHeaderHeight();
   const [permission, requestPermission] = useCameraPermissions();
   const [lookingUp, setLookingUp] = useState(false);
   const [lastCode, setLastCode] = useState(null);
@@ -48,6 +57,8 @@ export default function Scanner() {
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState({ name: '', phone: '' });
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [creditDays, setCreditDays] = useState('7');
+  const [reminderDays, setReminderDays] = useState('2');
   const [saving, setSaving] = useState(false);
   const [unknownCode, setUnknownCode] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -187,6 +198,12 @@ export default function Scanner() {
     if (cart.length === 0) {
       return Toast.show({ type: 'error', text1: 'Scan at least one item' });
     }
+    if (paymentMethod === 'credit' && !customer.name.trim()) {
+      return Toast.show({
+        type: 'error',
+        text1: 'Enter customer name for Udhaar',
+      });
+    }
     setSaving(true);
     try {
       const { data: bill } = await api.post('/bills', {
@@ -200,10 +217,17 @@ export default function Scanner() {
         taxPercent: 0,
         discount: 0,
         paymentMethod,
+        ...(paymentMethod === 'credit' && {
+          creditDays: Number(creditDays) || 7,
+          creditReminderDays: Number(reminderDays) || 2,
+        }),
       });
       Toast.show({ type: 'success', text1: `Bill ${bill.billNumber} created` });
       setCart([]);
       setCustomer({ name: '', phone: '' });
+      setPaymentMethod('cash');
+      setCreditDays('7');
+      setReminderDays('2');
       router.push(`/bill/${bill._id}`);
     } catch (err) {
       Toast.show({
@@ -241,65 +265,78 @@ export default function Scanner() {
     );
   }
 
+  const cameraHidden = paymentMethod === 'credit';
+
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <View style={styles.cameraWrap}>
-        <CameraView
-          style={StyleSheet.absoluteFill}
-          facing="back"
-          autofocus="on"
-          enableTorch={torch}
-          onBarcodeScanned={handleScan}
-          barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
-        />
+      {!cameraHidden ? (
+        <View style={styles.cameraWrap}>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            autofocus="on"
+            enableTorch={torch}
+            onBarcodeScanned={handleScan}
+            barcodeScannerSettings={{ barcodeTypes: BARCODE_TYPES }}
+          />
 
-        <View style={styles.overlay} pointerEvents="box-none">
-          <View style={styles.frame}>
-            <View style={[styles.corner, styles.cornerTL]} />
-            <View style={[styles.corner, styles.cornerTR]} />
-            <View style={[styles.corner, styles.cornerBL]} />
-            <View style={[styles.corner, styles.cornerBR]} />
-          </View>
-          <Text style={styles.hint}>
-            {lookingUp ? 'Looking up…' : 'Align barcode inside the frame'}
-          </Text>
+          <View style={styles.overlay} pointerEvents="box-none">
+            <View style={styles.frame}>
+              <View style={[styles.corner, styles.cornerTL]} />
+              <View style={[styles.corner, styles.cornerTR]} />
+              <View style={[styles.corner, styles.cornerBL]} />
+              <View style={[styles.corner, styles.cornerBR]} />
+            </View>
+            <Text style={styles.hint}>
+              {lookingUp ? 'Looking up…' : 'Align barcode inside the frame'}
+            </Text>
 
-          <View style={styles.cameraActions}>
-            <TouchableOpacity
-              onPress={() => setTorch((v) => !v)}
-              style={[styles.camBtn, torch && styles.camBtnActive]}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name={torch ? 'flash' : 'flash-outline'}
-                size={18}
-                color="#fff"
-              />
-              <Text style={styles.camBtnText}>Flash</Text>
-            </TouchableOpacity>
+            <View style={styles.cameraActions}>
+              <TouchableOpacity
+                onPress={() => setTorch((v) => !v)}
+                style={[styles.camBtn, torch && styles.camBtnActive]}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name={torch ? 'flash' : 'flash-outline'}
+                  size={18}
+                  color="#fff"
+                />
+                <Text style={styles.camBtnText}>Flash</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setPickerOpen(true)}
-              style={styles.camBtn}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="search" size={18} color="#fff" />
-              <Text style={styles.camBtnText}>Manual</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setPickerOpen(true)}
+                style={styles.camBtn}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="search" size={18} color="#fff" />
+                <Text style={styles.camBtnText}>Manual</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.resumeBar}
+          onPress={() => setPaymentMethod('cash')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="scan-outline" size={18} color={colors.brand} />
+          <Text style={styles.resumeText}>Scanner paused — tap to resume</Text>
+          <Ionicons name="chevron-up" size={18} color={colors.brand} />
+        </TouchableOpacity>
+      )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        style={styles.sheet}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+        style={[styles.sheet, cameraHidden && styles.sheetFull]}
       >
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 14, paddingBottom: 240 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 320 }}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.sheetHeader}>
@@ -399,47 +436,73 @@ export default function Scanner() {
         )}
 
         {cart.length > 0 && (
-          <Card style={{ padding: 14, marginTop: 12 }}>
-            <Label>Customer (optional)</Label>
-            <Input
-              placeholder="Walk-in Customer"
-              value={customer.name}
-              onChangeText={(v) => setCustomer({ ...customer, name: v })}
-            />
-            <Label style={{ marginTop: 12 }}>Phone</Label>
-            <Input
-              keyboardType="phone-pad"
-              value={customer.phone}
-              onChangeText={(v) => setCustomer({ ...customer, phone: v })}
-            />
+          <Card style={{ padding: 14, marginTop: 8 }}>
+            {paymentMethod !== 'credit' && (
+              <>
+                <Label>Customer (optional)</Label>
+                <Input
+                  placeholder="Walk-in Customer"
+                  value={customer.name}
+                  onChangeText={(v) => setCustomer({ ...customer, name: v })}
+                />
+                <Label style={{ marginTop: 12 }}>Phone</Label>
+                <Input
+                  keyboardType="phone-pad"
+                  value={customer.phone}
+                  onChangeText={(v) => setCustomer({ ...customer, phone: v })}
+                />
+              </>
+            )}
 
             <Label style={{ marginTop: 14 }}>Payment</Label>
             <View style={styles.payRow}>
-              {PAYMENTS.map((p) => (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => setPaymentMethod(p)}
-                  style={[
-                    styles.payChip,
-                    paymentMethod === p && {
-                      backgroundColor: colors.brandLight,
-                      borderColor: colors.brand,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color:
-                        paymentMethod === p ? colors.brand : colors.textMuted,
-                      fontWeight: '600',
-                      textTransform: 'capitalize',
-                    }}
+              {PAYMENTS.map((p) => {
+                const active = paymentMethod === p.key;
+                const isCredit = p.key === 'credit';
+                return (
+                  <TouchableOpacity
+                    key={p.key}
+                    onPress={() => setPaymentMethod(p.key)}
+                    style={[
+                      styles.payChip,
+                      active && isCredit && {
+                        backgroundColor: colors.warningBg,
+                        borderColor: colors.warning,
+                      },
+                      active && !isCredit && {
+                        backgroundColor: colors.brandLight,
+                        borderColor: colors.brand,
+                      },
+                    ]}
+                    activeOpacity={0.85}
                   >
-                    {p}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={{
+                        color: active
+                          ? isCredit ? colors.warning : colors.brand
+                          : colors.textMuted,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {p.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+
+            {paymentMethod === 'credit' && (
+              <CreditBlock
+                customer={customer}
+                onCustomerChange={(patch) =>
+                  setCustomer((c) => ({ ...c, ...patch }))
+                }
+                creditDays={creditDays}
+                onCreditDaysChange={setCreditDays}
+                reminderDays={reminderDays}
+                onReminderDaysChange={setReminderDays}
+              />
+            )}
 
             <Button
               title={
@@ -618,6 +681,23 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     marginTop: -20,
   },
+  sheetFull: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  resumeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.brandLight,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  resumeText: { color: colors.brand, fontWeight: '700', fontSize: 13 },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',

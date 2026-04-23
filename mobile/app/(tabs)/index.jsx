@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import api from '../../src/api/axios';
 import { useAuth } from '../../src/context/AuthContext';
-import { formatDate } from '../../src/utils/format';
+import { formatDate, formatCurrency } from '../../src/utils/format';
 import { colors } from '../../src/theme/colors';
 
 const QuickAction = ({ icon, label, onPress, tint }) => (
@@ -32,14 +32,26 @@ export default function Home() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [recent, setRecent] = useState([]);
+  const [creditSummary, setCreditSummary] = useState({
+    outstanding: 0,
+    count: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const { data } = await api.get('/bills');
-      setRecent(data.slice(0, 5));
+      const [bills, credit] = await Promise.all([
+        api.get('/bills'),
+        api.get('/credit/customers').catch(() => ({ data: [] })),
+      ]);
+      setRecent(bills.data.slice(0, 5));
+      const cs = credit.data || [];
+      setCreditSummary({
+        outstanding: cs.reduce((s, c) => s + (c.outstanding || 0), 0),
+        count: cs.filter((c) => c.outstanding > 0).length,
+      });
     } catch (err) {
       Toast.show({
         type: 'error',
@@ -100,6 +112,25 @@ export default function Home() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/credit')}
+          style={styles.creditCard}
+        >
+          <View style={styles.creditIcon}>
+            <Ionicons name="wallet-outline" size={22} color={colors.warning} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.creditTitle}>Udhaar / Credit Purchases</Text>
+            <Text style={styles.creditSub}>
+              {creditSummary.count > 0
+                ? `${formatCurrency(creditSummary.outstanding)} outstanding from ${creditSummary.count} customer${creditSummary.count !== 1 ? 's' : ''}`
+                : 'All settled — no outstanding credit'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -218,6 +249,28 @@ const styles = StyleSheet.create({
   },
   dashboardTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
   dashboardSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 3 },
+  creditCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  creditIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.warningBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creditTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  creditSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',

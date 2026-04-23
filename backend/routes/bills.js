@@ -67,12 +67,23 @@ router.post(
       taxPercent = 0,
       discount = 0,
       paymentMethod = 'cash',
-      paymentStatus = 'paid',
+      paymentStatus: paymentStatusIn,
+      creditDays,
+      creditReminderDays,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       res.status(400);
       throw new Error('At least one item is required');
+    }
+
+    // Credit purchases require a real customer name
+    if (paymentMethod === 'credit') {
+      const trimmed = (customerName || '').trim();
+      if (!trimmed || /^walk[- ]?in/i.test(trimmed)) {
+        res.status(400);
+        throw new Error('Customer name is required for credit (udhaar) sales');
+      }
     }
 
     // Fetch all products and validate stock
@@ -121,6 +132,16 @@ router.post(
 
     const billNumber = await nextBillNumber(req.user._id);
 
+    // Compute credit fields if applicable
+    const isCredit = paymentMethod === 'credit';
+    const days = Math.max(1, Number(creditDays) || 7);
+    const remind = Math.max(0, Number(creditReminderDays) || 2);
+    const dueDate = isCredit
+      ? new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+      : null;
+
+    const paymentStatus = isCredit ? 'unpaid' : paymentStatusIn || 'paid';
+
     const bill = await Bill.create({
       user: req.user._id,
       billNumber,
@@ -134,6 +155,9 @@ router.post(
       totalAmount,
       paymentMethod,
       paymentStatus,
+      creditDueDate: dueDate,
+      creditReminderDays: isCredit ? remind : 2,
+      creditPaidAt: null,
     });
 
     // Decrement stock and create export transactions

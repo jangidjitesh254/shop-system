@@ -17,10 +17,17 @@ function RootNav() {
     if (booting) return;
     const first = segments[0];
     const inAuth = first === 'login' || first === 'register';
+    const inAdmin = first === 'admin';
+    const isAdmin = user?.role === 'admin';
 
     if (!user && !inAuth) {
       router.replace('/login');
     } else if (user && inAuth) {
+      router.replace(isAdmin ? '/admin' : '/');
+    } else if (user && isAdmin && !inAdmin) {
+      // Admin is never supposed to be inside the shopkeeper UI
+      router.replace('/admin');
+    } else if (user && !isAdmin && inAdmin) {
       router.replace('/');
     }
   }, [user, booting, segments]);
@@ -61,6 +68,9 @@ function RootNav() {
       <Stack.Screen name="stock-in" options={{ title: 'Stock In' }} />
       <Stack.Screen name="product-form" options={{ title: 'Product' }} />
       <Stack.Screen name="bill/[id]" options={{ title: 'Invoice' }} />
+      <Stack.Screen name="credit" options={{ title: 'Udhaar (Credit)' }} />
+      <Stack.Screen name="credit/[name]" options={{ title: 'Customer' }} />
+      <Stack.Screen name="admin" options={{ headerShown: false }} />
     </Stack>
   );
 }

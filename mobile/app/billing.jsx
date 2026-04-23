@@ -13,10 +13,17 @@ import Toast from 'react-native-toast-message';
 import api from '../src/api/axios';
 import { Card, Input, Label, Button } from '../src/components/ui';
 import FormKeyboard from '../src/components/FormKeyboard';
+import CreditBlock from '../src/components/CreditBlock';
 import { formatCurrency } from '../src/utils/format';
 import { colors } from '../src/theme/colors';
 
-const PAYMENTS = ['cash', 'card', 'upi', 'other'];
+const PAYMENTS = [
+  { key: 'cash', label: 'Cash' },
+  { key: 'card', label: 'Card' },
+  { key: 'upi', label: 'UPI' },
+  { key: 'credit', label: 'Udhaar' },
+  { key: 'other', label: 'Other' },
+];
 
 export default function Billing() {
   const router = useRouter();
@@ -26,6 +33,8 @@ export default function Billing() {
   const [taxPercent, setTaxPercent] = useState('0');
   const [discount, setDiscount] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [creditDays, setCreditDays] = useState('7');
+  const [reminderDays, setReminderDays] = useState('2');
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -126,6 +135,12 @@ export default function Billing() {
     if (cart.length === 0) {
       return Toast.show({ type: 'error', text1: 'Add at least one item' });
     }
+    if (paymentMethod === 'credit' && !customer.name.trim()) {
+      return Toast.show({
+        type: 'error',
+        text1: 'Enter customer name for Udhaar',
+      });
+    }
     setSaving(true);
     try {
       const { data: bill } = await api.post('/bills', {
@@ -139,12 +154,19 @@ export default function Billing() {
         taxPercent: Number(taxPercent),
         discount: Number(discount),
         paymentMethod,
+        ...(paymentMethod === 'credit' && {
+          creditDays: Number(creditDays) || 7,
+          creditReminderDays: Number(reminderDays) || 2,
+        }),
       });
       Toast.show({ type: 'success', text1: `Bill ${bill.billNumber} created` });
       setCart([]);
       setCustomer({ name: '', phone: '' });
       setTaxPercent('0');
       setDiscount('0');
+      setPaymentMethod('cash');
+      setCreditDays('7');
+      setReminderDays('2');
       router.push(`/bill/${bill._id}`);
     } catch (err) {
       Toast.show({
@@ -159,11 +181,11 @@ export default function Billing() {
 
   return (
     <>
-      <FormKeyboard contentPadding={12} bottomGap={220}>
+      <FormKeyboard contentPadding={12} bottomGap={280}>
         <Button
           title="Add Product to Cart"
           onPress={() => setPickerOpen(true)}
-          style={{ marginBottom: 12 }}
+          style={{ marginBottom: 8 }}
         />
 
         <Card style={{ padding: 12 }}>
@@ -226,24 +248,26 @@ export default function Billing() {
           )}
         </Card>
 
-        <Card style={{ padding: 14, marginTop: 12 }}>
-          <Text style={styles.blockTitle}>Customer</Text>
-          <Label style={{ marginTop: 6 }}>Name</Label>
-          <Input
-            placeholder="Walk-in Customer"
-            value={customer.name}
-            onChangeText={(v) => setCustomer({ ...customer, name: v })}
-          />
-          <Label style={{ marginTop: 12 }}>Phone</Label>
-          <Input
-            keyboardType="phone-pad"
-            placeholder="Optional"
-            value={customer.phone}
-            onChangeText={(v) => setCustomer({ ...customer, phone: v })}
-          />
-        </Card>
+        {paymentMethod !== 'credit' && (
+          <Card style={{ padding: 14, marginTop: 8 }}>
+            <Text style={styles.blockTitle}>Customer</Text>
+            <Label style={{ marginTop: 6 }}>Name</Label>
+            <Input
+              placeholder="Walk-in Customer"
+              value={customer.name}
+              onChangeText={(v) => setCustomer({ ...customer, name: v })}
+            />
+            <Label style={{ marginTop: 12 }}>Phone</Label>
+            <Input
+              keyboardType="phone-pad"
+              placeholder="Optional"
+              value={customer.phone}
+              onChangeText={(v) => setCustomer({ ...customer, phone: v })}
+            />
+          </Card>
+        )}
 
-        <Card style={{ padding: 14, marginTop: 12 }}>
+        <Card style={{ padding: 14, marginTop: 8 }}>
           <Text style={styles.blockTitle}>Billing</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
             <View style={{ flex: 1 }}>
@@ -266,31 +290,53 @@ export default function Billing() {
 
           <Label style={{ marginTop: 14 }}>Payment</Label>
           <View style={styles.payRow}>
-            {PAYMENTS.map((p) => (
-              <TouchableOpacity
-                key={p}
-                onPress={() => setPaymentMethod(p)}
-                style={[
-                  styles.payChip,
-                  paymentMethod === p && {
-                    backgroundColor: colors.brandLight,
-                    borderColor: colors.brand,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color:
-                      paymentMethod === p ? colors.brand : colors.textMuted,
-                    fontWeight: '600',
-                    textTransform: 'capitalize',
-                  }}
+            {PAYMENTS.map((p) => {
+              const active = paymentMethod === p.key;
+              const isCredit = p.key === 'credit';
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  onPress={() => setPaymentMethod(p.key)}
+                  style={[
+                    styles.payChip,
+                    active && isCredit && {
+                      backgroundColor: colors.warningBg,
+                      borderColor: colors.warning,
+                    },
+                    active && !isCredit && {
+                      backgroundColor: colors.brandLight,
+                      borderColor: colors.brand,
+                    },
+                  ]}
+                  activeOpacity={0.85}
                 >
-                  {p}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={{
+                      color: active
+                        ? isCredit ? colors.warning : colors.brand
+                        : colors.textMuted,
+                      fontWeight: '600',
+                    }}
+                  >
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          {paymentMethod === 'credit' && (
+            <CreditBlock
+              customer={customer}
+              onCustomerChange={(patch) =>
+                setCustomer((c) => ({ ...c, ...patch }))
+              }
+              creditDays={creditDays}
+              onCreditDaysChange={setCreditDays}
+              reminderDays={reminderDays}
+              onReminderDaysChange={setReminderDays}
+            />
+          )}
 
           <View style={styles.summary}>
             <Row label="Subtotal" value={formatCurrency(subtotal)} />

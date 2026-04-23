@@ -9,6 +9,14 @@ const userSchema = new mongoose.Schema(
     shopName: { type: String, required: true, trim: true },
     shopAddress: { type: String, default: '' },
     phone: { type: String, default: '' },
+    role: {
+      type: String,
+      enum: ['owner', 'admin'],
+      default: 'owner',
+      index: true,
+    },
+    isActive: { type: Boolean, default: true, index: true },
+    lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -3,11 +3,15 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const bootstrapAdmin = require('./utils/bootstrapAdmin');
 
 const app = express();
 
-// Connect DB
-connectDB();
+// Connect DB, then bootstrap admin if configured
+(async () => {
+  await connectDB();
+  await bootstrapAdmin();
+})();
 
 // Middleware
 app.use(cors());
@@ -19,7 +23,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/bills', require('./routes/bills'));
+app.use('/api/credit', require('./routes/credit'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Error handlers
 app.use(notFound);

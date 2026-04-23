@@ -48,18 +48,21 @@ export default function Alerts() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
   const [bills, setBills] = useState([]);
+  const [creditReminders, setCreditReminders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [p, b] = await Promise.all([
+      const [p, b, c] = await Promise.all([
         api.get('/products'),
         api.get('/bills'),
+        api.get('/credit/reminders').catch(() => ({ data: [] })),
       ]);
       setProducts(p.data);
       setBills(b.data);
+      setCreditReminders(c.data || []);
     } catch (err) {
       Toast.show({
         type: 'error',
@@ -88,35 +91,44 @@ export default function Alerts() {
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
   const monthBills = bills.filter((b) => new Date(b.createdAt) >= monthStart);
+  const todayBills = bills.filter((b) => new Date(b.createdAt) >= todayStart);
 
-  const salesMap = new Map();
-  monthBills.forEach((b) => {
-    b.items?.forEach((it) => {
-      const key = String(it.product || it.productId || it.name);
-      const prev = salesMap.get(key) || {
-        name: it.name,
-        sku: it.sku || '',
-        qty: 0,
-        revenue: 0,
-      };
-      prev.qty += Number(it.quantity) || 0;
-      prev.revenue +=
-        Number(it.subtotal) ||
-        (Number(it.pricePerUnit) || 0) * (Number(it.quantity) || 0);
-      salesMap.set(key, prev);
+  const aggregate = (billList) => {
+    const m = new Map();
+    billList.forEach((b) => {
+      b.items?.forEach((it) => {
+        const key = String(it.product || it.productId || it.name);
+        const prev = m.get(key) || {
+          name: it.name,
+          sku: it.sku || '',
+          qty: 0,
+          revenue: 0,
+        };
+        prev.qty += Number(it.quantity) || 0;
+        prev.revenue +=
+          Number(it.subtotal) ||
+          (Number(it.pricePerUnit) || 0) * (Number(it.quantity) || 0);
+        m.set(key, prev);
+      });
     });
-  });
-  const topSellers = [...salesMap.values()]
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
+    return [...m.values()].sort((a, b) => b.qty - a.qty);
+  };
+
+  const topSellers = aggregate(monthBills).slice(0, 5);
+  const todayTopSellers = aggregate(todayBills).slice(0, 5);
 
   const outOfStock = products.filter((p) => p.stock <= 0);
   const lowStock = products.filter(
     (p) => p.stock > 0 && p.stock <= p.lowStockAlert
   );
   const pending = bills.filter(
-    (b) => b.paymentStatus && b.paymentStatus !== 'paid'
+    (b) =>
+      b.paymentStatus &&
+      b.paymentStatus !== 'paid' &&
+      b.paymentMethod !== 'credit'
   );
 
   return (
@@ -148,12 +160,76 @@ export default function Alerts() {
           color={colors.warning}
         />
         <SummaryTile
-          icon="card"
-          label="Pending"
-          value={pending.length}
-          color={colors.info}
+          icon="wallet"
+          label="Udhaar"
+          value={creditReminders.length}
+          color={colors.warning}
         />
       </View>
+
+      <Section
+        icon="wallet"
+        title="Credit Collection Due (Udhaar)"
+        count={creditReminders.length}
+        tint={{ bg: colors.warningBg, fg: colors.warning }}
+      >
+        {creditReminders.length === 0 ? (
+          <EmptyLine label="No credit payments due soon." />
+        ) : (
+          creditReminders.map((r, i) => (
+            <TouchableOpacity
+              key={r._id}
+              style={[
+                styles.row,
+                i === creditReminders.length - 1 && { borderBottomWidth: 0 },
+              ]}
+              onPress={() =>
+                router.push({
+                  pathname: '/credit/[name]',
+                  params: { name: r.customerName },
+                })
+              }
+            >
+              <View style={styles.rank}>
+                <Ionicons
+                  name="person"
+                  size={14}
+                  color={colors.accent}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowName}>{r.customerName}</Text>
+                <Text
+                  style={[
+                    styles.rowSub,
+                    {
+                      color: r.overdue ? colors.danger : colors.warning,
+                      fontWeight: '700',
+                    },
+                  ]}
+                >
+                  {r.overdue
+                    ? `Overdue by ${Math.abs(r.daysRemaining)} day${Math.abs(r.daysRemaining) !== 1 ? 's' : ''}`
+                    : r.daysRemaining === 0
+                    ? 'Due today'
+                    : `Due in ${r.daysRemaining} day${r.daysRemaining !== 1 ? 's' : ''}`}
+                </Text>
+                {r.customerPhone ? (
+                  <Text style={styles.rowSub}>{r.customerPhone}</Text>
+                ) : null}
+              </View>
+              <Text style={styles.amount}>
+                {formatCurrency(r.totalAmount)}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textLight}
+              />
+            </TouchableOpacity>
+          ))
+        )}
+      </Section>
 
       <Section
         icon="close-circle"
@@ -218,6 +294,46 @@ export default function Alerts() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
             </TouchableOpacity>
+          ))
+        )}
+      </Section>
+
+      <Section
+        icon="flash"
+        title="Today's Top Sellers"
+        count={todayTopSellers.length}
+        tint={{ bg: colors.successBg, fg: colors.success }}
+      >
+        {todayTopSellers.length === 0 ? (
+          <EmptyLine label="No sales today yet." />
+        ) : (
+          todayTopSellers.map((s, i) => (
+            <View
+              key={i}
+              style={[
+                styles.row,
+                i === todayTopSellers.length - 1 && { borderBottomWidth: 0 },
+              ]}
+            >
+              <View
+                style={[
+                  styles.rank,
+                  { backgroundColor: colors.successBg },
+                ]}
+              >
+                <Text
+                  style={[styles.rankText, { color: colors.success }]}
+                >
+                  {i + 1}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowName}>{s.name}</Text>
+                <Text style={styles.rowSub}>
+                  {s.qty} sold · {formatCurrency(s.revenue)}
+                </Text>
+              </View>
+            </View>
           ))
         )}
       </Section>

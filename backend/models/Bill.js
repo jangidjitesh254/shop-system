@@ -24,12 +24,25 @@ const billSchema = new mongoose.Schema(
     taxAmount: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
-    paymentMethod: { type: String, enum: ['cash', 'card', 'upi', 'other'], default: 'cash' },
-    paymentStatus: { type: String, enum: ['paid', 'unpaid', 'partial'], default: 'paid' },
+    paymentMethod: {
+      type: String,
+      enum: ['cash', 'card', 'upi', 'credit', 'other'],
+      default: 'cash',
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['paid', 'unpaid', 'partial'],
+      default: 'paid',
+    },
+    // Credit / Udhaar fields — only populated when paymentMethod === 'credit'
+    creditDueDate: { type: Date, default: null, index: true },
+    creditReminderDays: { type: Number, default: 2 },
+    creditPaidAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
 billSchema.index({ user: 1, billNumber: 1 }, { unique: true });
+billSchema.index({ user: 1, paymentMethod: 1, paymentStatus: 1 });
 
 module.exports = mongoose.model('Bill', billSchema);

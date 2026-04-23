@@ -1,6 +1,7 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const Product = require('../models/Product');
+const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -71,11 +72,31 @@ router.get(
 );
 
 // POST /api/products
+// Adding a product IS a stock-in event — if initialStock > 0 at creation,
+// we record a matching 'import' Transaction so the amount shows up in the
+// Dashboard stock-in totals and in Transactions / Movements history.
 router.post(
   '/',
   asyncHandler(async (req, res) => {
     const data = { ...req.body, user: req.user._id };
     const product = await Product.create(data);
+
+    const qty = Number(product.stock) || 0;
+    const cost = Number(product.costPrice) || 0;
+    if (qty > 0) {
+      await Transaction.create({
+        user: req.user._id,
+        type: 'import',
+        product: product._id,
+        productName: product.name,
+        quantity: qty,
+        pricePerUnit: cost,
+        totalAmount: qty * cost,
+        party: 'Initial stock',
+        note: `New product added with ${qty} ${product.unit || 'pcs'} initial stock`,
+      });
+    }
+
     res.status(201).json(product);
   })
 );

@@ -11,14 +11,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
-import api from '../api/axios';
-import { formatCurrency, formatDate } from '../utils/format';
-import { Input, Pill } from '../components/ui';
-import { colors } from '../theme/colors';
+import api from '../../src/api/axios';
+import { Input } from '../../src/components/ui';
+import { formatCurrency, formatDate } from '../../src/utils/format';
+import { colors } from '../../src/theme/colors';
 
-export default function BillsList() {
+export default function Shopkeepers() {
   const router = useRouter();
-  const [bills, setBills] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
@@ -28,12 +28,12 @@ export default function BillsList() {
     try {
       const params = {};
       if (search.trim()) params.search = search.trim();
-      const { data } = await api.get('/bills', { params });
-      setBills(data);
+      const { data } = await api.get('/admin/shopkeepers', { params });
+      setUsers(data);
     } catch (err) {
       Toast.show({
         type: 'error',
-        text1: 'Failed to load bills',
+        text1: 'Failed to load shopkeepers',
         text2: err.response?.data?.message || err.message,
       });
     } finally {
@@ -48,75 +48,54 @@ export default function BillsList() {
     }, [])
   );
 
-  const total = bills.reduce((s, b) => s + b.totalAmount, 0);
-
-  const renderItem = ({ item: b }) => {
-    const isCredit = b.paymentMethod === 'credit';
-    const isUnpaid = b.paymentStatus === 'unpaid';
-    return (
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => router.push(`/bill/${b._id}`)}
-        activeOpacity={0.7}
-      >
-        <View
-          style={[
-            styles.rowIcon,
-            isCredit && { backgroundColor: colors.warningBg },
-          ]}
-        >
-          <Ionicons
-            name={isCredit ? 'wallet-outline' : 'receipt-outline'}
-            size={20}
-            color={isCredit ? colors.warning : colors.brand}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={styles.billNo}>{b.billNumber}</Text>
-            {isCredit ? (
-              <Pill
-                label={isUnpaid ? 'UDHAAR' : 'UDHAAR · PAID'}
-                color={isUnpaid ? colors.warning : colors.success}
-                bg={isUnpaid ? colors.warningBg : colors.successBg}
-              />
-            ) : (
-              <Pill
-                label={b.paymentMethod.toUpperCase()}
-                color={colors.info}
-                bg={colors.infoBg}
-              />
-            )}
-          </View>
-          <Text style={styles.customer} numberOfLines={1}>
-            {b.customerName}
-            {b.customerPhone ? ` · ${b.customerPhone}` : ''}
-          </Text>
-          <Text style={styles.date}>
-            {formatDate(b.createdAt)} · {b.items.length} item
-            {b.items.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.amount,
-            isCredit && isUnpaid && { color: colors.warning },
-          ]}
-        >
-          {formatCurrency(b.totalAmount)}
+  const renderItem = ({ item: u }) => (
+    <TouchableOpacity
+      style={styles.row}
+      activeOpacity={0.75}
+      onPress={() =>
+        router.push({
+          pathname: '/admin/shopkeeper/[id]',
+          params: { id: String(u._id) },
+        })
+      }
+    >
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>
+          {(u.name || '?')[0]?.toUpperCase()}
         </Text>
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={colors.textLight}
-          style={{ marginLeft: 6 }}
-        />
-      </TouchableOpacity>
-    );
-  };
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.name} numberOfLines={1}>
+            {u.shopName}
+          </Text>
+          {u.isActive === false && (
+            <View style={styles.disabledPill}>
+              <Text style={styles.disabledText}>DISABLED</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.sub} numberOfLines={1}>
+          {u.name} · {u.email}
+        </Text>
+        <Text style={styles.sub}>
+          {u.billCount || 0} bill{(u.billCount || 0) !== 1 ? 's' : ''} ·{' '}
+          {u.productCount || 0} products
+        </Text>
+      </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={styles.revenue}>{formatCurrency(u.revenue || 0)}</Text>
+        {u.lastBillAt ? (
+          <Text style={styles.sub}>last {formatDate(u.lastBillAt)}</Text>
+        ) : (
+          <Text style={styles.sub}>no bills</Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={styles.header}>
         <View style={styles.searchWrap}>
           <Ionicons
@@ -126,7 +105,7 @@ export default function BillsList() {
             style={{ marginHorizontal: 10 }}
           />
           <Input
-            placeholder="Bill number or customer…"
+            placeholder="Search name, email, or shop…"
             value={search}
             onChangeText={setSearch}
             onSubmitEditing={() => load()}
@@ -138,11 +117,8 @@ export default function BillsList() {
 
       <View style={styles.summary}>
         <Text style={styles.summaryText}>
-          {bills.length} bills · Total {formatCurrency(total)}
+          {users.length} shopkeeper{users.length !== 1 ? 's' : ''}
         </Text>
-        <TouchableOpacity onPress={() => router.push('/billing')}>
-          <Text style={{ color: colors.brand, fontWeight: '700' }}>+ New Bill</Text>
-        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -151,17 +127,21 @@ export default function BillsList() {
         </View>
       ) : (
         <FlatList
-          data={bills}
-          keyExtractor={(i) => i._id}
+          data={users}
+          keyExtractor={(i) => String(i._id)}
           renderItem={renderItem}
           contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Ionicons name="document-outline" size={38} color={colors.textLight} />
+              <Ionicons
+                name="people-outline"
+                size={38}
+                color={colors.textLight}
+              />
               <Text style={{ color: colors.textMuted, marginTop: 10 }}>
-                No bills found
+                No shopkeepers yet
               </Text>
             </View>
           }
@@ -204,9 +184,6 @@ const styles = StyleSheet.create({
   summary: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   summaryText: { color: colors.textMuted, fontSize: 13 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -214,23 +191,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 14,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 10,
   },
-  rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.brandLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  billNo: { fontWeight: '700', color: colors.text, fontSize: 14 },
-  customer: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  date: { color: colors.textLight, marginTop: 2, fontSize: 11 },
-  amount: { fontSize: 16, fontWeight: '800', color: colors.text },
+  avatarText: { color: colors.brand, fontWeight: '800', fontSize: 18 },
+  name: { fontWeight: '700', color: colors.text, fontSize: 14 },
+  sub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  revenue: { fontWeight: '800', color: colors.text, fontSize: 14 },
+  disabledPill: {
+    backgroundColor: colors.dangerBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  disabledText: { color: colors.danger, fontWeight: '800', fontSize: 10 },
   emptyBox: { padding: 36, alignItems: 'center' },
 });
