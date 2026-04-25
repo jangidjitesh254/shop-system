@@ -149,7 +149,7 @@ export default function Home() {
           />
           <QuickAction
             icon="add-circle-outline"
-            label="Add Product"
+            label="Add New Product"
             onPress={() => router.push('/product-form')}
             tint={{ bg: colors.warningBg, fg: colors.warning }}
           />

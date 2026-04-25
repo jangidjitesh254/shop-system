@@ -14,6 +14,7 @@ import api from '../src/api/axios';
 import { Card, Input, Label, Button } from '../src/components/ui';
 import FormKeyboard from '../src/components/FormKeyboard';
 import CreditBlock from '../src/components/CreditBlock';
+import QtyEditModal from '../src/components/QtyEditModal';
 import { formatCurrency } from '../src/utils/format';
 import { colors } from '../src/theme/colors';
 
@@ -38,6 +39,7 @@ export default function Billing() {
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [qtyEditFor, setQtyEditFor] = useState(null);
 
   const loadProducts = async () => {
     try {
@@ -100,8 +102,8 @@ export default function Billing() {
     setCart(
       cart.map((i) => {
         if (i.productId !== productId) return i;
-        const next = i.quantity + delta;
-        if (next < 1) return i;
+        const next = +(i.quantity + delta).toFixed(3);
+        if (next <= 0) return i;
         if (next > i.stock) {
           Toast.show({
             type: 'error',
@@ -111,6 +113,12 @@ export default function Billing() {
         }
         return { ...i, quantity: next };
       })
+    );
+  };
+
+  const setExactQty = (productId, qty) => {
+    setCart(
+      cart.map((i) => (i.productId !== productId ? i : { ...i, quantity: qty }))
     );
   };
 
@@ -229,6 +237,14 @@ export default function Billing() {
                       <Ionicons name="add" size={16} color={colors.brand} />
                     </TouchableOpacity>
                   </View>
+
+                  <TouchableOpacity
+                    onPress={() => setQtyEditFor(i)}
+                    style={styles.pencilBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="create-outline" size={16} color={colors.brand} />
+                  </TouchableOpacity>
 
                   <View style={{ flex: 1 }}>
                     <Input
@@ -411,6 +427,17 @@ export default function Billing() {
           />
         </View>
       </Modal>
+
+      <QtyEditModal
+        visible={!!qtyEditFor}
+        item={qtyEditFor}
+        initialValue={qtyEditFor?.quantity}
+        onClose={() => setQtyEditFor(null)}
+        onSubmit={(qty) => {
+          setExactQty(qtyEditFor.productId, qty);
+          setQtyEditFor(null);
+        }}
+      />
     </>
   );
 }
@@ -454,6 +481,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
+    minWidth: 28,
+    textAlign: 'center',
+  },
+  pencilBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    backgroundColor: colors.brandLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemSubtotal: {
     fontWeight: '700',

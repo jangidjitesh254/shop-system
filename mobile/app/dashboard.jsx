@@ -17,18 +17,30 @@ import api from '../src/api/axios';
 import { formatCurrency, formatDate, formatDateShort } from '../src/utils/format';
 import { colors } from '../src/theme/colors';
 
-const StatCard = ({ label, value, sub, icon, tint }) => (
-  <View style={styles.stat}>
-    <View style={styles.statTop}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <View style={[styles.statIcon, { backgroundColor: tint.bg }]}>
-        <Ionicons name={icon} size={16} color={tint.fg} />
+const StatCard = ({ label, value, sub, icon, tint, onPress }) => {
+  const Wrap = onPress ? TouchableOpacity : View;
+  return (
+    <Wrap
+      style={styles.stat}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={styles.statTop}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <View style={[styles.statIcon, { backgroundColor: tint.bg }]}>
+          <Ionicons name={icon} size={16} color={tint.fg} />
+        </View>
       </View>
-    </View>
-    <Text style={styles.statValue}>{value}</Text>
-    {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
-  </View>
-);
+      <Text style={styles.statValue}>{value}</Text>
+      {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+      {onPress ? (
+        <View style={styles.statChev}>
+          <Ionicons name="chevron-forward" size={14} color={colors.textLight} />
+        </View>
+      ) : null}
+    </Wrap>
+  );
+};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -282,12 +294,25 @@ export default function Dashboard() {
         <StatCard
           label="Low Stock"
           value={String(stats.lowStockCount)}
-          sub={stats.lowStockCount > 0 ? 'Needs attention' : 'All good'}
+          sub={
+            stats.lowStockCount > 0
+              ? 'Tap to view list'
+              : 'All good'
+          }
           icon="warning-outline"
           tint={{
             bg: stats.lowStockCount > 0 ? colors.dangerBg : colors.successBg,
             fg: stats.lowStockCount > 0 ? colors.danger : colors.success,
           }}
+          onPress={
+            stats.lowStockCount > 0
+              ? () =>
+                  router.push({
+                    pathname: '/(tabs)/stock',
+                    params: { lowStock: 'true' },
+                  })
+              : undefined
+          }
         />
         <StatCard
           label="Bills this month"
@@ -560,6 +585,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statSub: { color: colors.textLight, fontSize: 11, marginTop: 2 },
+  statChev: { position: 'absolute', right: 10, bottom: 10 },
   block: {
     backgroundColor: '#fff',
     borderRadius: 14,

@@ -5,7 +5,7 @@ const billItemSchema = new mongoose.Schema(
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     name: { type: String, required: true },
     sku: { type: String, default: '' },
-    quantity: { type: Number, required: true, min: 1 },
+    quantity: { type: Number, required: true, min: 0.001 },
     pricePerUnit: { type: Number, required: true, min: 0 },
     subtotal: { type: Number, required: true, min: 0 },
   },

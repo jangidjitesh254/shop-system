@@ -172,18 +172,31 @@ router.get(
       throw new Error('Shopkeeper not found');
     }
 
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const userObjId = new mongoose.Types.ObjectId(id);
 
     const [
       productCount,
       lowStockProducts,
+      lowStockCount,
+      outOfStockCount,
       billCount,
-      monthRevenueAgg,
-      totalRevenueAgg,
+      todayAgg,
+      weekAgg,
+      monthAgg,
+      totalAgg,
       recentBills,
       creditOutstandingAgg,
+      stockInTodayAgg,
+      stockInMonthAgg,
     ] = await Promise.all([
       Product.countDocuments({ user: id }),
       Product.find({
@@ -192,41 +205,92 @@ router.get(
       })
         .limit(10)
         .select('name sku stock unit lowStockAlert'),
+      Product.countDocuments({
+        user: id,
+        $expr: { $lte: ['$stock', '$lowStockAlert'] },
+      }),
+      Product.countDocuments({ user: id, stock: { $lte: 0 } }),
       Bill.countDocuments({ user: id }),
       Bill.aggregate([
-        { $match: { user: new mongoose.Types.ObjectId(id), createdAt: { $gte: monthStart } } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        { $match: { user: userObjId, createdAt: { $gte: todayStart } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
       ]),
       Bill.aggregate([
-        { $match: { user: new mongoose.Types.ObjectId(id) } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        { $match: { user: userObjId, createdAt: { $gte: weekStart } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+      ]),
+      Bill.aggregate([
+        { $match: { user: userObjId, createdAt: { $gte: monthStart } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
+      ]),
+      Bill.aggregate([
+        { $match: { user: userObjId } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
       ]),
       Bill.find({ user: id })
         .sort({ createdAt: -1 })
         .limit(10)
-        .select('billNumber customerName totalAmount paymentMethod paymentStatus createdAt'),
+        .select(
+          'billNumber customerName totalAmount paymentMethod paymentStatus createdAt'
+        ),
       Bill.aggregate([
         {
           $match: {
-            user: new mongoose.Types.ObjectId(id),
+            user: userObjId,
             paymentMethod: 'credit',
             paymentStatus: 'unpaid',
           },
         },
         { $group: { _id: null, total: { $sum: '$totalAmount' }, count: { $sum: 1 } } },
       ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            user: userObjId,
+            type: 'import',
+            createdAt: { $gte: todayStart },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
+      Transaction.aggregate([
+        {
+          $match: {
+            user: userObjId,
+            type: 'import',
+            createdAt: { $gte: monthStart },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      ]),
     ]);
+
+    const totalRevenue = totalAgg[0]?.total || 0;
+    const totalBillCount = totalAgg[0]?.count || 0;
 
     res.json({
       user,
       stats: {
+        // Counts
         productCount,
         billCount,
-        totalRevenue: totalRevenueAgg[0]?.total || 0,
-        monthRevenue: monthRevenueAgg[0]?.total || 0,
+        lowStockCount,
+        outOfStockCount,
+        // Revenue
+        todayRevenue: todayAgg[0]?.total || 0,
+        todayBillCount: todayAgg[0]?.count || 0,
+        weekRevenue: weekAgg[0]?.total || 0,
+        weekBillCount: weekAgg[0]?.count || 0,
+        monthRevenue: monthAgg[0]?.total || 0,
+        monthBillCount: monthAgg[0]?.count || 0,
+        totalRevenue,
+        avgBillValue: totalBillCount > 0 ? totalRevenue / totalBillCount : 0,
+        // Stock-in
+        todayStockIn: stockInTodayAgg[0]?.total || 0,
+        monthStockIn: stockInMonthAgg[0]?.total || 0,
+        // Credit
         creditOutstanding: creditOutstandingAgg[0]?.total || 0,
         creditUnpaidCount: creditOutstandingAgg[0]?.count || 0,
-        lowStockCount: lowStockProducts.length,
       },
       lowStockProducts,
       recentBills,

@@ -8,7 +8,7 @@ const transactionSchema = new mongoose.Schema(
     // 'export' = stock-out (sales / outgoing)
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     productName: { type: String, required: true }, // snapshot
-    quantity: { type: Number, required: true, min: 1 },
+    quantity: { type: Number, required: true, min: 0.001 },
     pricePerUnit: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
     party: { type: String, default: '' }, // supplier or customer name

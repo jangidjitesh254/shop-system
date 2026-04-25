@@ -199,24 +199,64 @@ export default function ShopkeeperDetail() {
           ) : null}
         </View>
 
+        {/* Revenue summary */}
+        <View style={styles.revenueCard}>
+          <Text style={styles.revenueTitle}>Revenue</Text>
+          <View style={styles.revenueRow}>
+            <View style={styles.revenueItem}>
+              <Text style={styles.revenueLabel}>Today</Text>
+              <Text style={styles.revenueValue}>
+                {formatCurrency(s.todayRevenue)}
+              </Text>
+              <Text style={styles.revenueSub}>
+                {s.todayBillCount} bill{s.todayBillCount !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={styles.revenueDivider} />
+            <View style={styles.revenueItem}>
+              <Text style={styles.revenueLabel}>7 Days</Text>
+              <Text style={styles.revenueValue}>
+                {formatCurrency(s.weekRevenue)}
+              </Text>
+              <Text style={styles.revenueSub}>
+                {s.weekBillCount} bill{s.weekBillCount !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={styles.revenueDivider} />
+            <View style={styles.revenueItem}>
+              <Text style={styles.revenueLabel}>This Month</Text>
+              <Text style={styles.revenueValue}>
+                {formatCurrency(s.monthRevenue)}
+              </Text>
+              <Text style={styles.revenueSub}>
+                {s.monthBillCount} bill{s.monthBillCount !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>All-time total</Text>
+            <Text style={styles.totalValue}>
+              {formatCurrency(s.totalRevenue)}
+            </Text>
+          </View>
+          <Text style={styles.avgLine}>
+            Avg. bill: {formatCurrency(s.avgBillValue)} ·{' '}
+            {s.billCount} bills lifetime
+          </Text>
+        </View>
+
         {/* Stats grid */}
         <View style={styles.grid}>
           <Stat
-            label="Total revenue"
-            value={formatCurrency(s.totalRevenue)}
-            icon="cash-outline"
-            tint={{ bg: colors.successBg, fg: colors.success }}
+            label="Stock-in today"
+            value={formatCurrency(s.todayStockIn || 0)}
+            icon="arrow-down-circle-outline"
+            tint={{ bg: colors.accentBg, fg: colors.accent }}
           />
           <Stat
-            label="Month revenue"
-            value={formatCurrency(s.monthRevenue)}
-            icon="trending-up-outline"
-            tint={{ bg: colors.brandLight, fg: colors.brand }}
-          />
-          <Stat
-            label="Bills"
-            value={String(s.billCount)}
-            icon="receipt-outline"
+            label="Stock-in month"
+            value={formatCurrency(s.monthStockIn || 0)}
+            icon="arrow-down-circle-outline"
             tint={{ bg: colors.accentBg, fg: colors.accent }}
           />
           <Stat
@@ -231,11 +271,30 @@ export default function ShopkeeperDetail() {
             tint={{ bg: colors.infoBg, fg: colors.info }}
           />
           <Stat
+            label="Out of stock"
+            value={String(s.outOfStockCount || 0)}
+            icon="warning-outline"
+            tint={{
+              bg:
+                (s.outOfStockCount || 0) > 0
+                  ? colors.dangerBg
+                  : colors.successBg,
+              fg:
+                (s.outOfStockCount || 0) > 0 ? colors.danger : colors.success,
+            }}
+          />
+          <Stat
             label="Udhaar unpaid"
             value={formatCurrency(s.creditOutstanding)}
             sub={`${s.creditUnpaidCount} bill${s.creditUnpaidCount !== 1 ? 's' : ''}`}
             icon="wallet-outline"
             tint={{ bg: colors.warningBg, fg: colors.warning }}
+          />
+          <Stat
+            label="Bills lifetime"
+            value={String(s.billCount)}
+            icon="receipt-outline"
+            tint={{ bg: colors.brandLight, fg: colors.brand }}
           />
         </View>
 
@@ -408,6 +467,64 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   statusText: { fontSize: 10, fontWeight: '800' },
+  revenueCard: {
+    marginTop: 12,
+    backgroundColor: colors.brand,
+    borderRadius: 14,
+    padding: 16,
+    shadowColor: colors.brand,
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  revenueTitle: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  revenueRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    alignItems: 'flex-start',
+  },
+  revenueItem: { flex: 1 },
+  revenueLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11 },
+  revenueValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  revenueSub: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  revenueDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignSelf: 'stretch',
+    marginHorizontal: 6,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  totalLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12 },
+  totalValue: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  avgLine: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    marginTop: 6,
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   stat: {
     flexBasis: '48%',

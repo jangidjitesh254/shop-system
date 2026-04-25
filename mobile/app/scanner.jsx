@@ -21,6 +21,7 @@ import api from '../src/api/axios';
 import { formatCurrency } from '../src/utils/format';
 import { Card, Input, Label, Button } from '../src/components/ui';
 import CreditBlock from '../src/components/CreditBlock';
+import QtyEditModal from '../src/components/QtyEditModal';
 import { colors } from '../src/theme/colors';
 
 const BARCODE_TYPES = [
@@ -64,6 +65,7 @@ export default function Scanner() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
+  const [qtyEditFor, setQtyEditFor] = useState(null);
 
   const scanLockRef = useRef(false);
   const lastScanRef = useRef({ code: null, at: 0 });
@@ -174,8 +176,8 @@ export default function Scanner() {
       prev
         .map((i) => {
           if (i.productId !== productId) return i;
-          const next = i.quantity + delta;
-          if (next < 1) return null;
+          const next = +(i.quantity + delta).toFixed(3);
+          if (next <= 0) return null;
           if (next > i.stock) {
             Toast.show({
               type: 'error',
@@ -186,6 +188,15 @@ export default function Scanner() {
           return { ...i, quantity: next };
         })
         .filter(Boolean)
+    );
+  };
+
+  const setExactQty = (productId, qty) => {
+    setCart((prev) =>
+      prev.map((i) => {
+        if (i.productId !== productId) return i;
+        return { ...i, quantity: qty };
+      })
     );
   };
 
@@ -404,7 +415,7 @@ export default function Scanner() {
                   {i.name}
                 </Text>
                 <Text style={styles.itemSub}>
-                  {formatCurrency(i.pricePerUnit)} · {i.sku}
+                  {formatCurrency(i.pricePerUnit)}/{i.unit} · {i.sku}
                 </Text>
               </View>
               <View style={styles.qtyBox}>
@@ -422,6 +433,13 @@ export default function Scanner() {
                   <Ionicons name="add" size={16} color={colors.brand} />
                 </TouchableOpacity>
               </View>
+              <TouchableOpacity
+                onPress={() => setQtyEditFor(i)}
+                hitSlop={8}
+                style={styles.pencilBtn}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.brand} />
+              </TouchableOpacity>
               <Text style={styles.itemSubtotal}>
                 {formatCurrency(i.pricePerUnit * i.quantity)}
               </Text>
@@ -542,6 +560,7 @@ export default function Scanner() {
           <FlatList
             data={filtered}
             keyExtractor={(i) => i._id}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.pickItem}
@@ -583,6 +602,17 @@ export default function Scanner() {
           />
         </View>
       </Modal>
+
+      <QtyEditModal
+        visible={!!qtyEditFor}
+        item={qtyEditFor}
+        initialValue={qtyEditFor?.quantity}
+        onClose={() => setQtyEditFor(null)}
+        onSubmit={(qty) => {
+          setExactQty(qtyEditFor.productId, qty);
+          setQtyEditFor(null);
+        }}
+      />
     </View>
   );
 }
@@ -741,6 +771,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     fontSize: 13,
+    minWidth: 22,
+    textAlign: 'center',
+  },
+  pencilBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    backgroundColor: colors.brandLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemSubtotal: {
     minWidth: 64,

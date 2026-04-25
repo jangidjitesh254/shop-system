@@ -32,15 +32,22 @@ const Section = ({ icon, title, count, tint, children }) => (
   </View>
 );
 
-const SummaryTile = ({ icon, label, value, color }) => (
-  <View style={[styles.tile, { borderColor: color }]}>
-    <View style={[styles.tileIcon, { backgroundColor: color + '22' }]}>
-      <Ionicons name={icon} size={16} color={color} />
-    </View>
-    <Text style={[styles.tileValue, { color }]}>{value}</Text>
-    <Text style={styles.tileLabel}>{label}</Text>
-  </View>
-);
+const SummaryTile = ({ icon, label, value, color, onPress }) => {
+  const Wrap = onPress ? TouchableOpacity : View;
+  return (
+    <Wrap
+      style={[styles.tile, { borderColor: color }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[styles.tileIcon, { backgroundColor: color + '22' }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      <Text style={[styles.tileValue, { color }]}>{value}</Text>
+      <Text style={styles.tileLabel}>{label}</Text>
+    </Wrap>
+  );
+};
 
 const EmptyLine = ({ label }) => <Text style={styles.emptyLine}>{label}</Text>;
 
@@ -152,18 +159,41 @@ export default function Alerts() {
           label="Out of stock"
           value={outOfStock.length}
           color={colors.danger}
+          onPress={
+            outOfStock.length > 0
+              ? () =>
+                  router.push({
+                    pathname: '/(tabs)/stock',
+                    params: { lowStock: 'true' },
+                  })
+              : undefined
+          }
         />
         <SummaryTile
           icon="warning"
           label="Low stock"
           value={lowStock.length}
           color={colors.warning}
+          onPress={
+            lowStock.length > 0
+              ? () =>
+                  router.push({
+                    pathname: '/(tabs)/stock',
+                    params: { lowStock: 'true' },
+                  })
+              : undefined
+          }
         />
         <SummaryTile
           icon="wallet"
           label="Udhaar"
           value={creditReminders.length}
           color={colors.warning}
+          onPress={
+            creditReminders.length > 0
+              ? () => router.push('/credit')
+              : undefined
+          }
         />
       </View>
 

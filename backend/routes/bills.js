@@ -104,7 +104,7 @@ router.post(
         throw new Error(`Product not found: ${item.productId}`);
       }
       const qty = Number(item.quantity);
-      if (!qty || qty < 1) {
+      if (!qty || qty <= 0) {
         res.status(400);
         throw new Error(`Invalid quantity for ${product.name}`);
       }

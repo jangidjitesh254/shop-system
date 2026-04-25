@@ -10,14 +10,18 @@
       "backgroundColor": "#ffffff",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "android": {
       "package": "com.shopmanager.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#2563eb"
       },
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "ios": {
       "supportsTablet": true,
@@ -30,7 +34,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Shop Manager to use the camera to scan product barcodes."
+          "cameraPermission": "Allow Shop Manager to use the camera to scan product barcodes.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ]
     ],
@@ -41,7 +47,18 @@
       "typedRoutes": false
     },
     "extra": {
-      "apiBaseUrl": "https://shop-system-hezz.onrender.com"
+      "apiBaseUrl": "https://shop-system-hezz.onrender.com/api",
+      "router": {},
+      "eas": {
+        "projectId": "192fd11f-db3d-4645-a9f9-34daec1c3cc9"
+      }
+    },
+    "owner": "zitesh",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/192fd11f-db3d-4645-a9f9-34daec1c3cc9"
     }
   }
 }
